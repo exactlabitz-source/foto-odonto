@@ -291,6 +291,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     <h3>Fotos do protocolo</h3>
     <p class="note">Toque em uma foto para ajustar. Ao terminar, use “Aplicar na série” e o PDF sai com a versão ajustada.</p>
     <div id="edSerieGrid" class="serie-grid"></div>
+    <button id="edAll" class="btn">Baixar todas as fotos da série</button>
   </div>
 
   <div id="edEmpty" class="card empty">
@@ -328,7 +329,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     </div>
 
     <div class="actions">
-      <button id="edSave" class="btn primary">Salvar JPEG</button>
+      <button id="edSave" class="btn primary">Baixar foto editada (JPEG)</button>
       <button id="edShare" class="btn" hidden>Compartilhar</button>
       <button id="edReset" class="linkbtn">Zerar ajustes</button>
     </div>
@@ -1495,6 +1496,32 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       msg("\u201C" + nome + "\u201D ajustada e guardada. Era a \xFAltima: gere o PDF na aba Gabarito.");
     }
   }
+  async function baixarTodas() {
+    const ids = GUIAS.map((g) => g.id).filter((id) => serie.has(id));
+    if (!ids.length) return;
+    const files = ids.map((id) => new File([serie.get(id).bytes], id + (serie.get(id).orig ? "_editada" : "") + ".jpg", { type: "image/jpeg" }));
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files });
+        msg("Fotos compartilhadas.");
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    for (const f of files) {
+      const url = URL.createObjectURL(f);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = f.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4e3);
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    msg(files.length + " fotos baixadas. Se o navegador pedir, permita downloads m\xFAltiplos.");
+  }
   async function restoreOriginal() {
     if (!slotId) return;
     const id = slotId;
@@ -1553,7 +1580,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       msg("N\xE3o foi poss\xEDvel gerar o arquivo.");
       return;
     }
-    const nome = state.nome + "_editada.jpg";
+    const nome = (slotId || state.nome) + "_editada.jpg";
     if (share && navigator.canShare) {
       const file = new File([blob], nome, { type: "image/jpeg" });
       if (navigator.canShare({ files: [file] })) {
@@ -1614,6 +1641,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       $3("edShare").addEventListener("click", () => save(true));
     }
     $3("edApply").addEventListener("click", applyToSerie);
+    $3("edAll").addEventListener("click", baixarTodas);
     $3("edRestore").addEventListener("click", restoreOriginal);
     serie.onChange(renderStrip);
     onPhoto(() => {
