@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#00508A">
+<title>Fotografia Odontológica no Celular</title>
+<meta name="description" content="Gabarito de enquadramento, avaliador de qualidade e editor simples para treinar fotografia odontológica com o celular. Tudo roda no seu aparelho: nenhuma foto é enviada.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap brand">
+    <img class="logo" src="logo.png" alt="EXACT Odontologia Digital" width="130" height="44">
+    <div class="brand-txt">
+      <h1>Fotografia Odontológica no Celular</h1>
+      <p class="sub">Nenhuma foto sai do seu celular.</p>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Ferramentas">
+  <button role="tab" data-tab="gabarito" aria-selected="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    <span>Gabarito</span>
+  </button>
+  <button role="tab" data-tab="avaliador" aria-selected="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+    <span>Avaliador</span>
+  </button>
+  <button role="tab" data-tab="editor" aria-selected="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    <span>Editor</span>
+  </button>
+</nav>
+
+<main class="wrap">
+
+<!-- ============================ GABARITO ============================ -->
+<section id="tab-gabarito" class="panel" role="tabpanel">
+  <h2>Gabarito de enquadramento</h2>
+  <p class="lead">Escolha a foto do protocolo, abra a câmera e alinhe o que vê com as linhas-guia.</p>
+
+  <div id="guideChips" class="chips" role="listbox" aria-label="Tipo de foto"></div>
+
+  <div id="stage" class="stage land">
+    <video id="cam" playsinline muted autoplay hidden></video>
+    <img id="galleryImg" alt="" hidden>
+    <svg id="overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div id="stageEmpty" class="stage-empty">
+      <p>A câmera ainda está desligada.</p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="btnCam" class="btn primary">Abrir câmera</button>
+    <button id="btnShot" class="btn gold" hidden>Capturar</button>
+    <button id="btnFlip" class="btn" hidden>Trocar câmera</button>
+    <label class="btn">Usar foto da galeria
+      <input id="galleryInput" type="file" accept="image/*" hidden>
+    </label>
+  </div>
+  <p id="camMsg" class="note" role="status"></p>
+
+  <div id="guideInfo" class="card"></div>
+
+  <div id="shotResult" class="card" hidden>
+    <h3>Foto atual</h3>
+    <img id="shotThumb" alt="Foto capturada" class="thumb">
+    <div class="actions">
+      <button class="btn primary" data-goto="avaliador">Avaliar esta foto</button>
+      <button class="btn" data-goto="editor">Editar</button>
+    </div>
+  </div>
+
+  <p class="note"><strong>Importante:</strong> a câmera do navegador costuma ter qualidade menor que o aplicativo de câmera do celular. Para a melhor qualidade, fotografe no app nativo (modo Pro ou manual, se houver) e depois carregue a imagem no Avaliador e no Editor.</p>
+</section>
+
+<!-- ============================ AVALIADOR ============================ -->
+<section id="tab-avaliador" class="panel" role="tabpanel" hidden>
+  <h2>Avaliador de qualidade</h2>
+  <p class="lead">Receba um retorno imediato sobre nitidez, exposição e brilho antes de mostrar o caso.</p>
+
+  <div class="actions">
+    <label class="btn primary">Escolher foto
+      <input id="evalInput" type="file" accept="image/*" hidden>
+    </label>
+  </div>
+
+  <div id="evalEmpty" class="card empty">
+    <p>Nenhuma foto carregada. Escolha uma foto da galeria ou capture uma no Gabarito.</p>
+  </div>
+
+  <div id="evalOut" hidden>
+    <div class="eval-top">
+      <canvas id="evalPreview" class="thumb"></canvas>
+      <div id="evalVerdict" class="verdict"></div>
+    </div>
+    <div id="evalItems" class="items"></div>
+    <div class="card">
+      <h3>Histograma de luminosidade</h3>
+      <canvas id="evalHist" width="640" height="140" class="hist"></canvas>
+      <p class="note">Esquerda = sombras, direita = realces. Barras encostadas na direita indicam áreas estouradas.</p>
+    </div>
+    <p class="note">Este avaliador mede a imagem (foco, luz, brilho, resolução). Ele <strong>não</strong> julga enquadramento, afastadores, saliva ou a correção clínica da foto: isso continua sendo avaliação sua.</p>
+  </div>
+</section>
+
+<!-- ============================ EDITOR ============================ -->
+<section id="tab-editor" class="panel" role="tabpanel" hidden>
+  <h2>Editor simples</h2>
+  <p class="lead">Toque em <strong>Melhorar automaticamente</strong> e, se precisar, ajuste o brilho e o contraste.</p>
+
+  <div class="actions">
+    <label class="btn primary">Escolher foto
+      <input id="edInput" type="file" accept="image/*" hidden>
+    </label>
+  </div>
+
+  <div id="edEmpty" class="card empty">
+    <p>Nenhuma foto carregada. Escolha uma foto da galeria ou capture uma no Gabarito.</p>
+  </div>
+
+  <div id="edWork" hidden>
+    <div class="ed-canvas-wrap">
+      <canvas id="edCanvas"></canvas>
+    </div>
+
+    <div class="ed-main">
+      <button id="edAuto" class="btn gold big">Melhorar automaticamente</button>
+      <div class="row2">
+        <button id="edPick" class="btn">Balanço de branco: tocar no cinza</button>
+        <button id="edHold" class="btn">Segurar para ver o original</button>
+      </div>
+    </div>
+    <p id="edMsg" class="note" role="status"></p>
+
+    <div class="sliders" id="edSliders"></div>
+
+    <details class="card more">
+      <summary>Mais ajustes</summary>
+      <div class="inner">
+        <div class="sliders" id="edSlidersMore"></div>
+        <h3>Corte</h3>
+        <div id="edCrop" class="chips small"></div>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button id="edSave" class="btn primary">Salvar JPEG</button>
+      <button id="edShare" class="btn" hidden>Compartilhar</button>
+      <button id="edReset" class="linkbtn">Zerar ajustes</button>
+    </div>
+    <p class="note">A foto salva por aqui <strong>não carrega dados de localização</strong> (EXIF). Em documentação clínica, edite o mínimo: ajuste luz e cor para padronizar, sem embelezar. Evite nome de paciente no nome do arquivo.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <img src="logo.png" alt="EXACT Odontologia Digital" width="64" height="22">
+    <p><strong>Privacidade:</strong> tudo é processado no seu aparelho. Nenhuma foto é enviada para servidor algum.</p>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
