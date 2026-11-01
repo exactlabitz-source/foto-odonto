@@ -145,6 +145,20 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
 .foot img{height:22px;width:auto;display:block;margin:0 0 8px}
 @media (max-width:420px){ .top .logo{height:38px} .top h1{font-size:.98rem} }
 
+/* série e PDF */
+.cnt{font-weight:500;font-size:.82rem;color:var(--muted);margin-left:6px}
+.serie-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.slot{appearance:none;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:4px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:3px;align-items:stretch}
+.slot .th{aspect-ratio:1/1;border-radius:8px;background:var(--bg) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700}
+.slot .lb{font-size:.68rem;line-height:1.15;text-align:center;min-height:2.3em}
+.slot.done{border-color:var(--ok)}
+.slot.cur{border-color:var(--accent)}
+.field{display:block;font-size:.88rem;font-weight:600;margin:12px 0 4px}
+.field input{display:block;width:100%;margin-top:4px;font:inherit;font-weight:400;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.slot.edited .th{box-shadow:inset 0 0 0 3px var(--accent)}
+.slot:disabled{opacity:.45;cursor:default}
+
 </style>
 </head>
 <body>
@@ -179,7 +193,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
 <!-- ============================ GABARITO ============================ -->
 <section id="tab-gabarito" class="panel" role="tabpanel">
   <h2>Gabarito de enquadramento</h2>
-  <p class="lead">Escolha a foto do protocolo, abra a câmera e alinhe o que vê com as linhas-guia.</p>
+  <p class="lead">Escolha a foto do protocolo, abra a câmera e alinhe o que vê com as linhas-guia. No fim, gere um PDF com as 8 fotos.</p>
 
   <div id="guideChips" class="chips" role="listbox" aria-label="Tipo de foto"></div>
 
@@ -211,6 +225,22 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       <button class="btn primary" data-goto="avaliador">Avaliar esta foto</button>
       <button class="btn" data-goto="editor">Editar</button>
     </div>
+  </div>
+
+  <div id="serieCard" class="card">
+    <h3>Série do protocolo <span id="serieCount" class="cnt"></span></h3>
+    <p class="note">Cada foto que você capturar ou escolher fica guardada aqui (só neste aparelho, enquanto a página estiver aberta). Toque em um quadro para refazer aquela foto.</p>
+    <div id="serieGrid" class="serie-grid"></div>
+    <label class="field">Identificação no PDF (opcional)
+      <input id="serieId" type="text" maxlength="40" placeholder="Ex.: iniciais ou código do caso" autocomplete="off">
+    </label>
+    <p class="note">Não escreva o nome completo do paciente.</p>
+    <div class="actions">
+      <button id="btnPdf" class="btn gold" disabled>Gerar PDF das fotos</button>
+      <button id="btnPdfShare" class="btn" hidden>Compartilhar PDF</button>
+      <button id="btnSerieClear" class="linkbtn">Limpar série</button>
+    </div>
+    <p id="pdfMsg" class="note" role="status"></p>
   </div>
 
   <p class="note"><strong>Importante:</strong> a câmera do navegador costuma ter qualidade menor que o aplicativo de câmera do celular. Para a melhor qualidade, fotografe no app nativo (modo Pro ou manual, se houver) e depois carregue a imagem no Avaliador e no Editor.</p>
@@ -257,6 +287,12 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     </label>
   </div>
 
+  <div id="edSerie" class="card" hidden>
+    <h3>Fotos do protocolo</h3>
+    <p class="note">Toque em uma foto para ajustar. Ao terminar, use “Aplicar na série” e o PDF sai com a versão ajustada.</p>
+    <div id="edSerieGrid" class="serie-grid"></div>
+  </div>
+
   <div id="edEmpty" class="card empty">
     <p>Nenhuma foto carregada. Escolha uma foto da galeria ou capture uma no Gabarito.</p>
   </div>
@@ -286,6 +322,11 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       </div>
     </details>
 
+    <div id="edApplyBox" class="actions" hidden>
+      <button id="edApply" class="btn gold big">Aplicar na série e ir para a próxima</button>
+      <button id="edRestore" class="linkbtn" hidden>Restaurar original desta foto</button>
+    </div>
+
     <div class="actions">
       <button id="edSave" class="btn primary">Salvar JPEG</button>
       <button id="edShare" class="btn" hidden>Compartilhar</button>
@@ -310,11 +351,11 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
   var L = (x1, y1, x2, y2, cls = "g-line") => `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
   var E = (cx, cy, rx, ry, cls = "g-thin") => `<ellipse class="${cls}" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`;
   var R = (x, y, w, h, cls = "g-zone") => `<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5"/>`;
-  var thirds = (cls = "g-thin") => L(33.3, 0, 33.3, 100, cls) + L(66.6, 0, 66.6, 100, cls) + L(0, 33.3, 100, 33.3, cls) + L(0, 66.6, 100, 66.6, cls);
   var GUIAS = [
     {
       id: "face-repouso",
-      nome: "Face em repouso",
+      nome: "Frontal em repouso",
+      curto: "Frontal repouso",
       orient: "port",
       svg: E(50, 47, 30, 38) + L(50, 0, 50, 100) + L(0, 38, 100, 38) + L(0, 62, 100, 62, "g-thin"),
       dica: [
@@ -322,108 +363,96 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
         "L\xE1bios em repouso, sem contrair o mento.",
         "Linha vertical sobre o meio da face; linha horizontal na altura dos olhos.",
         "C\xE2mera na altura dos olhos do paciente, a cerca de 1 m, sem zoom digital."
-      ],
-      protocolo: "Face frontal em repouso"
+      ]
     },
     {
       id: "face-sorriso",
-      nome: "Face sorrindo",
+      nome: "Frontal sorrindo",
+      curto: "Frontal sorrindo",
       orient: "port",
       svg: E(50, 47, 30, 38) + L(50, 0, 50, 100) + L(0, 38, 100, 38) + R(28, 58, 44, 14),
       dica: [
-        "Mesmo enquadramento da face em repouso, para poder comparar as duas.",
+        "Mesmo enquadramento da frontal em repouso, para poder comparar as duas.",
         "Pe\xE7a um sorriso amplo e natural; o ret\xE2ngulo marca onde o sorriso deve ficar.",
         "Linha vertical sobre o meio da face. Cabe\xE7a reta, sem inclinar."
-      ],
-      protocolo: "Face frontal sorrindo"
+      ]
     },
     {
-      id: "sorriso-close",
-      nome: "Sorriso aproximado",
+      id: "labio-repouso",
+      nome: "Frontal l\xE1bios em repouso",
+      curto: "L\xE1bios em repouso",
       orient: "land",
-      svg: R(10, 22, 80, 56) + L(50, 0, 50, 100) + L(0, 50, 100, 50, "g-thin"),
+      svg: R(18, 28, 64, 44) + L(50, 0, 50, 100) + L(0, 50, 100, 50, "g-thin"),
       dica: [
-        "L\xE1bios e dentes ocupando o ret\xE2ngulo; linha m\xE9dia dental sobre a linha vertical.",
-        "Horizontal alinhada: o plano incisal fica paralelo \xE0 borda da foto.",
-        "Sem retratores, com o sorriso natural do paciente."
-      ],
-      protocolo: "Sorriso aproximado (l\xE1bios)"
+        "Aproxima\xE7\xE3o dos l\xE1bios e do ter\xE7o inferior da face, em repouso, sem contrair.",
+        "Linha m\xE9dia da face sobre a linha vertical; comissuras na horizontal.",
+        "Se poss\xEDvel, mostre quanto do incisivo superior aparece com o l\xE1bio relaxado.",
+        "Mesma dist\xE2ncia e luz das outras fotos extraorais."
+      ]
+    },
+    {
+      id: "perfil-repouso",
+      nome: "Perfil em repouso",
+      curto: "Perfil repouso",
+      orient: "port",
+      svg: E(50, 47, 24, 38) + L(50, 0, 50, 100, "g-thin") + L(0, 44, 100, 44) + L(0, 62, 100, 62, "g-thin"),
+      dica: [
+        "Paciente de lado (perfil de 90\xB0), cabe\xE7a reta e olhar no horizonte.",
+        "Linha horizontal na altura do plano de Frankfurt (do tragus \xE0 base da \xF3rbita).",
+        "L\xE1bios em repouso, cabelo preso para mostrar a orelha.",
+        "C\xE2mera perpendicular ao perfil, na altura dos olhos, a cerca de 1 m."
+      ]
+    },
+    {
+      id: "perfil-sorriso",
+      nome: "Perfil sorrindo",
+      curto: "Perfil sorrindo",
+      orient: "port",
+      svg: E(50, 47, 24, 38) + L(50, 0, 50, 100, "g-thin") + L(0, 44, 100, 44) + R(30, 56, 30, 14),
+      dica: [
+        "Mesmo enquadramento do perfil em repouso, para poder comparar.",
+        "Pe\xE7a um sorriso amplo e natural, mantendo a cabe\xE7a na mesma posi\xE7\xE3o.",
+        "Linha horizontal no plano de Frankfurt."
+      ]
     },
     {
       id: "intra-frontal",
       nome: "Intraoral frontal",
+      curto: "Intraoral frontal",
       orient: "land",
       svg: R(8, 24, 84, 52) + L(50, 0, 50, 100) + L(0, 50, 100, 50) + E(50, 50, 40, 22),
       dica: [
         "Dentes em oclus\xE3o, com afastadores labiais sem tensionar.",
-        "Linha m\xE9dia dental sobre a linha vertical; plano oclusal horizontal (linha dourada).",
+        "Linha m\xE9dia dental sobre a linha vertical; plano oclusal horizontal.",
         "Mostrar de pr\xE9-molar a pr\xE9-molar, sem l\xE1bio ou l\xEDngua cobrindo os dentes.",
         "Foco nos incisivos centrais. Seque a superf\xEDcie para reduzir reflexos."
-      ],
-      protocolo: "Intraoral frontal em oclus\xE3o"
-    },
-    {
-      id: "lateral-dir",
-      nome: "Lateral direita",
-      orient: "land",
-      svg: L(50, 0, 50, 100) + L(0, 50, 100, 50) + R(6, 26, 88, 48),
-      dica: [
-        "Espelho lateral e afastador; centro da foto no canino.",
-        "Plano oclusal na horizontal (linha dourada).",
-        "Mostrar do canino ao \xFAltimo molar vis\xEDvel, em oclus\xE3o.",
-        "Evite emba\xE7ar o espelho: aque\xE7a em \xE1gua morna ou use ar."
-      ],
-      protocolo: "Lateral direita"
+      ]
     },
     {
       id: "lateral-esq",
       nome: "Lateral esquerda",
+      curto: "Lateral esquerda",
       orient: "land",
       svg: L(50, 0, 50, 100) + L(0, 50, 100, 50) + R(6, 26, 88, 48),
       dica: [
         "Espelho lateral e afastador; centro da foto no canino.",
-        "Plano oclusal na horizontal (linha dourada).",
+        "Plano oclusal na horizontal.",
         "Mostrar do canino ao \xFAltimo molar vis\xEDvel, em oclus\xE3o.",
         "Mantenha a mesma dist\xE2ncia da lateral direita para poder comparar."
-      ],
-      protocolo: "Lateral esquerda"
+      ]
     },
     {
-      id: "oclusal-sup",
-      nome: "Oclusal superior",
+      id: "lateral-dir",
+      nome: "Lateral direita",
+      curto: "Lateral direita",
       orient: "land",
-      svg: E(50, 50, 38, 42) + L(50, 0, 50, 100) + L(0, 50, 100, 50, "g-thin"),
+      svg: L(50, 0, 50, 100) + L(0, 50, 100, 50) + R(6, 26, 88, 48),
       dica: [
-        "Espelho oclusal inclinado a cerca de 45\xB0, apoiado sem tocar a mucosa.",
-        "Rafe palatina sobre a linha vertical; arcada dentro do contorno.",
-        "Foto tirada de frente para o espelho, com a c\xE2mera ligeiramente acima.",
-        "Aque\xE7a o espelho antes para n\xE3o emba\xE7ar."
-      ],
-      protocolo: "Oclusal superior"
-    },
-    {
-      id: "oclusal-inf",
-      nome: "Oclusal inferior",
-      orient: "land",
-      svg: E(50, 50, 38, 42) + L(50, 0, 50, 100) + L(0, 50, 100, 50, "g-thin"),
-      dica: [
-        "Espelho oclusal apoiado, l\xEDngua recolhida para tr\xE1s.",
-        "Linha m\xE9dia da arcada sobre a linha vertical; arcada dentro do contorno.",
-        "Controle a saliva (sugador) antes de disparar."
-      ],
-      protocolo: "Oclusal inferior"
-    },
-    {
-      id: "detalhe",
-      nome: "Dente / detalhe",
-      orient: "land",
-      svg: thirds() + R(30, 25, 40, 50) + L(50, 40, 50, 60) + L(40, 50, 60, 50),
-      dica: [
-        "Dente centralizado no ret\xE2ngulo; fundo escuro fosco (contrastador).",
-        "Foto perpendicular \xE0 face vestibular, sem \xE2ngulo.",
-        "Boa luz difusa para evitar reflexo; inclui uma escala de cor, se houver."
-      ],
-      protocolo: "Dente / detalhe com contrastador"
+        "Espelho lateral e afastador; centro da foto no canino.",
+        "Plano oclusal na horizontal.",
+        "Mostrar do canino ao \xFAltimo molar vis\xEDvel, em oclus\xE3o.",
+        "Evite emba\xE7ar o espelho: aque\xE7a em \xE1gua morna ou use ar."
+      ]
     }
   ];
 
@@ -469,6 +498,184 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     return c;
   }
 
+  // js/serie.js
+  var MAX_LADO = 2e3;
+  var QUALIDADE = 0.88;
+  var itens = /* @__PURE__ */ new Map();
+  var ouvintes = /* @__PURE__ */ new Set();
+  var serie = {
+    has: (id) => itens.has(id),
+    get: (id) => itens.get(id),
+    count: () => itens.size,
+    onChange: (fn) => ouvintes.add(fn),
+    async set(id, canvas, orig) {
+      const s = Math.min(1, MAX_LADO / Math.max(canvas.width, canvas.height));
+      let c = canvas;
+      if (s < 1) {
+        c = document.createElement("canvas");
+        c.width = Math.round(canvas.width * s);
+        c.height = Math.round(canvas.height * s);
+        c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+      }
+      const blob = await new Promise((ok) => c.toBlob(ok, "image/jpeg", QUALIDADE));
+      if (!blob) throw new Error("jpeg");
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const velho = itens.get(id);
+      if (velho) URL.revokeObjectURL(velho.url);
+      itens.set(id, { bytes, w: c.width, h: c.height, url: URL.createObjectURL(blob), orig: orig || null });
+      ouvintes.forEach((f) => f());
+    },
+    // grava a versão editada guardando a original (a primeira) para poder restaurar
+    async apply(id, canvas) {
+      const it = itens.get(id);
+      const orig = it ? it.orig || { bytes: it.bytes, w: it.w, h: it.h } : null;
+      await this.set(id, canvas, orig);
+    },
+    async restore(id) {
+      const it = itens.get(id);
+      if (!it || !it.orig) return;
+      const blob = new Blob([it.orig.bytes], { type: "image/jpeg" });
+      URL.revokeObjectURL(it.url);
+      itens.set(id, { bytes: it.orig.bytes, w: it.orig.w, h: it.orig.h, url: URL.createObjectURL(blob), orig: null });
+      ouvintes.forEach((f) => f());
+    },
+    clear() {
+      itens.forEach((v) => URL.revokeObjectURL(v.url));
+      itens.clear();
+      ouvintes.forEach((f) => f());
+    }
+  };
+  var latin1 = (s) => {
+    const b = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      b[i] = c < 256 ? c : 63;
+    }
+    return b;
+  };
+  var esc = (s) => String(s).replace(/[\\()]/g, "\\$&").replace(/[\r\n]+/g, " ");
+  var n2 = (x) => (Math.round(x * 100) / 100).toString();
+  var Pdf = class {
+    constructor() {
+      this.partes = [];
+      this.tam = 0;
+      this.pos = [];
+      this.raw("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+    }
+    raw(x) {
+      const b = typeof x === "string" ? latin1(x) : x;
+      this.partes.push(b);
+      this.tam += b.length;
+    }
+    obj(n, dict, stream2) {
+      this.pos[n] = this.tam;
+      if (stream2) {
+        this.raw(n + " 0 obj\n<< " + dict + " /Length " + stream2.length + " >>\nstream\n");
+        this.raw(stream2);
+        this.raw("\nendstream\nendobj\n");
+      } else this.raw(n + " 0 obj\n" + dict + "\nendobj\n");
+    }
+    fim(total) {
+      const ini = this.tam;
+      let x = "xref\n0 " + total + "\n0000000000 65535 f \n";
+      for (let i = 1; i < total; i++) x += String(this.pos[i]).padStart(10, "0") + " 00000 n \n";
+      x += "trailer\n<< /Size " + total + " /Root 1 0 R >>\nstartxref\n" + ini + "\n%%EOF\n";
+      this.raw(x);
+      return new Blob(this.partes, { type: "application/pdf" });
+    }
+  };
+  var PW = 595;
+  var PH = 842;
+  var M = 36;
+  var PAGINAS = [
+    { ids: ["face-repouso", "face-sorriso", "perfil-repouso", "perfil-sorriso"], altura: 300 },
+    { ids: ["labio-repouso", "intra-frontal", "lateral-esq", "lateral-dir"], altura: 232 }
+  ];
+  async function logoJpeg() {
+    const img = document.querySelector(".top .logo");
+    if (!img || !img.naturalWidth) return null;
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const x = c.getContext("2d");
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(img, 0, 0);
+    const blob = await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.92));
+    if (!blob) return null;
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height };
+  }
+  async function gerarPdf(identificacao) {
+    const data = (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR");
+    const logo = await logoJpeg();
+    const pdf = new Pdf();
+    let prox = 5;
+    const imgs = [];
+    const addImg = (nome, o) => {
+      const e = { n: prox++, nome, ...o };
+      imgs.push(e);
+      return e;
+    };
+    const logoRef = logo ? addImg("Logo", logo) : null;
+    const paginas = PAGINAS.map((p2) => ({ ...p2, fotos: p2.ids.filter((id) => serie.has(id)) })).filter((p2) => p2.fotos.length > 0);
+    const total = paginas.length;
+    const usadas = {};
+    paginas.forEach((p2) => p2.fotos.forEach((id) => {
+      usadas[id] = addImg("Im" + id.replace(/\W/g, ""), serie.get(id));
+    }));
+    imgs.forEach((im) => pdf.obj(
+      im.n,
+      "/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode",
+      im.bytes
+    ));
+    pdf.obj(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+    pdf.obj(4, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    const xobj = "/XObject << " + imgs.map((im) => "/" + im.nome + " " + im.n + " 0 R").join(" ") + " >>";
+    const recursos = "/Resources << /Font << /F1 3 0 R /F2 4 0 R >> " + xobj + " >>";
+    const texto = (fonte, tam, x, yTopo, s, cinza = 0) => "BT /" + fonte + " " + tam + " Tf " + cinza + " g " + n2(x) + " " + n2(PH - yTopo) + " Td (" + esc(s) + ") Tj ET\n";
+    const figura = (nome, x, yTopo, w, h) => "q " + n2(w) + " 0 0 " + n2(h) + " " + n2(x) + " " + n2(PH - yTopo - h) + " cm /" + nome + " Do Q\n";
+    const idPagina = [];
+    let n = prox;
+    paginas.forEach((p2, pi) => {
+      let c = "";
+      let xTitulo = M;
+      if (logoRef) {
+        const lh = 30, lw = lh * logoRef.w / logoRef.h;
+        c += figura(logoRef.nome, M, M, lw, lh);
+        xTitulo = M + lw + 14;
+      }
+      c += texto("F2", 14, xTitulo, M + 13, "Documenta\xE7\xE3o fotogr\xE1fica", 0.04);
+      const sub = (identificacao ? "Identifica\xE7\xE3o: " + identificacao + "   |   " : "") + "Data: " + data;
+      c += texto("F1", 9, xTitulo, M + 27, sub, 0.35);
+      c += "0.894 0 0.447 RG 2 w " + M + " " + (PH - 74) + " m " + (PW - M) + " " + (PH - 74) + " l S\n";
+      const larg = (PW - 2 * M - 16) / 2;
+      p2.ids.forEach((id, i) => {
+        const col = i % 2, lin = Math.floor(i / 2);
+        const x0 = M + col * (larg + 16), y0 = 92 + lin * (p2.altura + 34);
+        const g = GUIAS.find((q) => q.id === id);
+        if (usadas[id]) {
+          const im = usadas[id];
+          const s = Math.min(larg / im.w, p2.altura / im.h);
+          const w = im.w * s, h = im.h * s;
+          c += figura(im.nome, x0 + (larg - w) / 2, y0 + (p2.altura - h) / 2, w, h);
+        } else {
+          c += "0.7 G 0.8 w [3 3] 0 d " + n2(x0) + " " + n2(PH - y0 - p2.altura) + " " + n2(larg) + " " + p2.altura + " re S [] 0 d\n";
+          c += texto("F1", 9, x0 + larg / 2 - 40, y0 + p2.altura / 2, "foto n\xE3o registrada", 0.5);
+        }
+        c += texto("F2", 10, x0, y0 + p2.altura + 15, g.nome, 0.1);
+      });
+      c += texto("F1", 8, M, PH - 22, "Gerado no navegador, sem envio de dados. EXACT Odontologia Digital.", 0.5);
+      c += texto("F1", 8, PW - M - 40, PH - 22, "P\xE1gina " + (pi + 1) + "/" + total, 0.5);
+      const idC = n++, idP = n++;
+      pdf.obj(idC, "", latin1(c));
+      pdf.obj(idP, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + PW + " " + PH + "] " + recursos + " /Contents " + idC + " 0 R >>");
+      idPagina.push(idP);
+    });
+    pdf.obj(2, "<< /Type /Pages /Kids [" + idPagina.map((i) => i + " 0 R").join(" ") + "] /Count " + idPagina.length + " >>");
+    pdf.obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
+    return pdf.fim(n);
+  }
+
   // js/gabarito.js
   var $ = (id) => document.getElementById(id);
   var guia = GUIAS[0];
@@ -481,13 +688,14 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     GUIAS.forEach((g) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = g.nome;
+      b.textContent = (serie.has(g.id) ? "\u2713 " : "") + g.nome;
       b.setAttribute("role", "option");
       b.setAttribute("aria-selected", String(g.id === guia.id));
       b.addEventListener("click", () => {
         guia = g;
         applyGuide();
         renderChips();
+        renderSerie();
       });
       box.appendChild(b);
     });
@@ -579,7 +787,24 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
     const bmp = await createImageBitmap(c);
     setPhoto(bmp, "captura_" + guia.id);
-    showMsg("Foto capturada. Veja abaixo e escolha avaliar ou editar.");
+    await guardar(c, true);
+  }
+  async function guardar(canvas, avancar) {
+    const atual = guia;
+    try {
+      await serie.set(atual.id, canvas);
+    } catch (e) {
+      showMsg("N\xE3o consegui guardar esta foto na s\xE9rie.");
+      return;
+    }
+    const i = GUIAS.indexOf(atual);
+    const prox = avancar ? [...GUIAS.slice(i + 1), ...GUIAS.slice(0, i)].find((g) => !serie.has(g.id)) : null;
+    if (prox) {
+      guia = prox;
+      applyGuide();
+    }
+    renderChips();
+    showMsg(prox ? "Foto \u201C" + atual.nome + "\u201D guardada. Pr\xF3xima: " + prox.nome + "." : "Foto \u201C" + atual.nome + "\u201D guardada na s\xE9rie. " + (serie.count() === GUIAS.length ? "S\xE9rie completa: gere o PDF abaixo." : "Escolha outra foto do protocolo ou gere o PDF."));
   }
   async function fromGallery(file) {
     if (!file) return;
@@ -592,8 +817,8 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       img.src = galleryUrl;
       img.hidden = false;
       $("stageEmpty").hidden = true;
-      setPhoto(bmp, file.name);
-      showMsg("Foto da galeria sobre o gabarito: confira o alinhamento com as linhas.");
+      setPhoto(bmp, "captura_" + guia.id);
+      await guardar(bitmapToCanvas(bmp, 2e3), false);
     } catch (e) {
       showMsg("N\xE3o consegui abrir essa imagem. Tente JPG ou PNG.");
     }
@@ -608,9 +833,91 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     $("shotThumb").src = c.toDataURL("image/jpeg", 0.85);
     card.hidden = false;
   }
+  function renderSerie() {
+    const box = $("serieGrid");
+    box.innerHTML = "";
+    GUIAS.forEach((g, i) => {
+      const it = serie.get(g.id);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "slot" + (it ? " done" : "") + (g.id === guia.id ? " cur" : "");
+      b.setAttribute("aria-label", g.nome + (it ? " (guardada)" : " (pendente)"));
+      const th = document.createElement("span");
+      th.className = "th";
+      if (it) th.style.backgroundImage = "url(" + it.url + ")";
+      else th.textContent = String(i + 1);
+      const lb = document.createElement("span");
+      lb.className = "lb";
+      lb.textContent = g.curto;
+      b.append(th, lb);
+      b.addEventListener("click", () => {
+        guia = g;
+        applyGuide();
+        renderChips();
+        renderSerie();
+        $("stage").scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      box.appendChild(b);
+    });
+    $("serieCount").textContent = serie.count() + " de " + GUIAS.length + " fotos";
+    $("btnPdf").disabled = serie.count() === 0;
+  }
+  var ultimoPdf = null;
+  async function fazerPdf(compartilhar) {
+    const msg2 = $("pdfMsg");
+    if (!serie.count()) {
+      msg2.textContent = "Capture ou escolha ao menos uma foto.";
+      return;
+    }
+    $("btnPdf").disabled = true;
+    msg2.textContent = "Montando o PDF\u2026";
+    try {
+      const ident = $("serieId").value.trim().slice(0, 40);
+      const blob = await gerarPdf(ident);
+      const nome = "documentacao_fotografica_" + (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) + ".pdf";
+      const falta = GUIAS.filter((g) => !serie.has(g.id)).map((g) => g.nome);
+      const file = new File([blob], nome, { type: "application/pdf" });
+      if (compartilhar && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Documenta\xE7\xE3o fotogr\xE1fica" });
+      } else {
+        const a = document.createElement("a");
+        if (ultimoPdf) URL.revokeObjectURL(ultimoPdf);
+        ultimoPdf = URL.createObjectURL(blob);
+        a.href = ultimoPdf;
+        a.download = nome;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      msg2.textContent = "PDF pronto (" + Math.round(blob.size / 1024) + " KB)." + (falta.length ? " Ficaram em branco: " + falta.join(", ") + "." : "");
+    } catch (e) {
+      if (e && e.name === "AbortError") msg2.textContent = "";
+      else msg2.textContent = "N\xE3o consegui gerar o PDF neste aparelho.";
+    } finally {
+      renderSerie();
+    }
+  }
   function initGabarito() {
     renderChips();
     applyGuide();
+    renderSerie();
+    serie.onChange(() => {
+      renderChips();
+      renderSerie();
+    });
+    $("btnPdf").addEventListener("click", () => fazerPdf(false));
+    const f = new File([new Blob(["x"])], "a.pdf", { type: "application/pdf" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      $("btnPdfShare").hidden = false;
+      $("btnPdfShare").addEventListener("click", () => fazerPdf(true));
+    }
+    $("btnSerieClear").addEventListener("click", () => {
+      if (!serie.count() || confirm("Apagar todas as fotos da s\xE9rie?")) {
+        serie.clear();
+        showMsg("");
+        $("pdfMsg").textContent = "";
+      }
+    });
     $("btnCam").addEventListener("click", openCam);
     $("btnShot").addEventListener("click", shoot);
     $("btnFlip").addEventListener("click", () => {
@@ -634,6 +941,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
   var $2 = (id) => document.getElementById(id);
   var ANALISE_W = 640;
   var TILE = 8;
+  var TUNE = { floor: 8 };
   function analyze(bitmap) {
     const s = Math.min(1, ANALISE_W / bitmap.width);
     const w = Math.max(16, Math.round(bitmap.width * s));
@@ -647,7 +955,7 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     const n = w * h;
     const lum = new Float32Array(n);
     const hist = new Uint32Array(64);
-    let sum = 0, clipped = 0, dark = 0;
+    let sum = 0, clipped = 0, dark = 0, sumLit = 0, nLit = 0;
     for (let i = 0, p2 = 0; i < n; i++, p2 += 4) {
       const r = d[p2], g = d[p2 + 1], b = d[p2 + 2];
       const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -656,14 +964,20 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       hist[Math.min(63, y >> 2)]++;
       if (Math.min(r, g, b) >= 245) clipped++;
       if (y < 20) dark++;
+      else {
+        sumLit += y;
+        nLit++;
+      }
     }
     const mean = sum / n;
+    const meanLit = nLit > 0.1 * n ? sumLit / nLit : mean;
     const K = 4;
     const tw = Math.floor(w / TILE), th = Math.floor(h / TILE);
     const sumF = new Float64Array(TILE * TILE), sumV = new Float64Array(TILE * TILE);
     const addPair = (x, y, a0, a1, b0, b1) => {
       const t = Math.min(TILE - 1, Math.floor(y / th)) * TILE + Math.min(TILE - 1, Math.floor(x / tw));
       const dF = Math.abs(a1 - a0), dB = Math.abs(b1 - b0);
+      if (dF < TUNE.floor) return;
       sumF[t] += dF;
       sumV[t] += Math.max(0, dF - dB);
     };
@@ -694,20 +1008,23 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       w: bitmap.width,
       h: bitmap.height,
       mean,
+      meanLit,
       clipped: clipped / n,
       dark: dark / n,
       blur,
       hist: Array.from(hist)
     };
   }
+  var BLUR_ATENCAO = 0.3;
+  var BLUR_RUIM = 0.45;
   function judge(m) {
     const items = [];
     const longSide = Math.max(m.w, m.h);
     let st = "ok", sd = "Foco adequado para documenta\xE7\xE3o.";
-    if (m.blur >= 0.5) {
+    if (m.blur >= BLUR_RUIM) {
       st = "bad";
       sd = "Parece fora de foco ou tremida. Toque na tela sobre o dente para focar, apoie o celular e use temporizador.";
-    } else if (m.blur >= 0.3) {
+    } else if (m.blur >= BLUR_ATENCAO) {
       st = "warn";
       sd = "Nitidez no limite. Aproxime o aparelho (sem zoom digital), melhore a luz e confira o foco antes de disparar.";
     }
@@ -723,20 +1040,21 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     }
     items.push({ titulo: "Reflexos e \xE1reas estouradas", status: ct, valor: cp.toFixed(1).replace(".", ",") + "% dos pixels", dica: cd });
     let et = "ok", ed = "Luminosidade m\xE9dia adequada.";
-    if (m.mean < 55) {
+    const L2 = m.meanLit;
+    if (L2 < 55) {
       et = "bad";
       ed = "Imagem muito escura. Melhore a luz em vez de clarear depois: o ru\xEDdo aparece e a cor muda.";
-    } else if (m.mean < 85) {
+    } else if (L2 < 85) {
       et = "warn";
       ed = "Imagem um pouco escura. Considere mais luz ou toque na tela para ajustar a exposi\xE7\xE3o sobre os dentes.";
-    } else if (m.mean > 205) {
+    } else if (L2 > 205) {
       et = "bad";
       ed = "Imagem muito clara. Reduza a luz ou a exposi\xE7\xE3o para n\xE3o perder detalhe do esmalte.";
-    } else if (m.mean > 175) {
+    } else if (L2 > 175) {
       et = "warn";
       ed = "Imagem um pouco clara. Confira se o esmalte ainda mostra textura.";
     }
-    items.push({ titulo: "Exposi\xE7\xE3o geral", status: et, valor: "m\xE9dia " + Math.round(m.mean) + " de 255", dica: ed });
+    items.push({ titulo: "Exposi\xE7\xE3o geral", status: et, valor: "m\xE9dia " + Math.round(L2) + " de 255 (sem contar \xE1reas pretas)", dica: ed });
     let rt = "ok", rd = "Resolu\xE7\xE3o suficiente para tela, impress\xE3o pequena e apresenta\xE7\xE3o.";
     if (longSide < 1200) {
       rt = "bad";
@@ -1116,7 +1434,76 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
     msg("");
     schedule();
   }
+  var slotId = null;
+  function renderStrip() {
+    const card = $3("edSerie");
+    card.hidden = serie.count() === 0;
+    const box = $3("edSerieGrid");
+    box.innerHTML = "";
+    GUIAS.forEach((g, i) => {
+      const it = serie.get(g.id);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "slot" + (it ? " done" : "") + (it && it.orig ? " edited" : "") + (g.id === slotId ? " cur" : "");
+      b.disabled = !it;
+      b.setAttribute("aria-label", g.nome + (it ? it.orig ? " (editada)" : "" : " (sem foto)"));
+      const th = document.createElement("span");
+      th.className = "th";
+      if (it) th.style.backgroundImage = "url(" + it.url + ")";
+      else th.textContent = String(i + 1);
+      const lb = document.createElement("span");
+      lb.className = "lb";
+      lb.textContent = g.curto + (it && it.orig ? " \u270E" : "");
+      b.append(th, lb);
+      b.addEventListener("click", () => openSlot(g.id));
+      box.appendChild(b);
+    });
+    $3("edApplyBox").hidden = !slotId;
+    $3("edRestore").hidden = !(slotId && serie.get(slotId) && serie.get(slotId).orig);
+  }
+  async function openSlot(id) {
+    const it = serie.get(id);
+    if (!it) return;
+    try {
+      const bmp = await createImageBitmap(new Blob([it.bytes], { type: "image/jpeg" }));
+      resetAll();
+      slotId = id;
+      setPhoto(bmp, "serie_" + id);
+      renderStrip();
+    } catch (e) {
+      msg("N\xE3o consegui abrir esta foto.");
+    }
+  }
+  async function applyToSerie() {
+    if (!slotId || !state.bitmap) return;
+    const id = slotId;
+    msg("Aplicando\u2026");
+    try {
+      await serie.apply(id, exportCanvas());
+    } catch (e) {
+      msg("N\xE3o consegui aplicar na s\xE9rie.");
+      return;
+    }
+    const nome = GUIAS.find((g) => g.id === id).nome;
+    const ids = GUIAS.map((g) => g.id).filter((x) => serie.has(x));
+    const prox = ids[ids.indexOf(id) + 1];
+    if (prox) {
+      await openSlot(prox);
+      msg("\u201C" + nome + "\u201D ajustada e guardada para o PDF. Agora: " + GUIAS.find((g) => g.id === prox).nome + ".");
+    } else {
+      await openSlot(id);
+      msg("\u201C" + nome + "\u201D ajustada e guardada. Era a \xFAltima: gere o PDF na aba Gabarito.");
+    }
+  }
+  async function restoreOriginal() {
+    if (!slotId) return;
+    const id = slotId;
+    await serie.restore(id);
+    await openSlot(id);
+    msg("Original restaurada.");
+  }
   function showState() {
+    renderStrip();
     const has = !!state.bitmap;
     $3("edEmpty").hidden = has;
     $3("edWork").hidden = !has;
@@ -1198,7 +1585,9 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       try {
         const bmp = await loadFile(f);
         resetAll();
-        setPhoto(bmp, f.name);
+        slotId = null;
+        setPhoto(bmp, "foto");
+        renderStrip();
       } catch (err) {
         msg("N\xE3o consegui abrir essa imagem. Tente JPG ou PNG.");
       }
@@ -1224,11 +1613,18 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
       $3("edShare").hidden = false;
       $3("edShare").addEventListener("click", () => save(true));
     }
+    $3("edApply").addEventListener("click", applyToSerie);
+    $3("edRestore").addEventListener("click", restoreOriginal);
+    serie.onChange(renderStrip);
     onPhoto(() => {
+      if (!state.nome.startsWith("serie_")) slotId = null;
       if (!$3("tab-editor").hidden) showState();
     });
     document.addEventListener("tabchange", (e) => {
-      if (e.detail === "editor") showState();
+      if (e.detail !== "editor") return;
+      const primeira = GUIAS.find((g) => serie.has(g.id));
+      if (primeira && !slotId && (!state.bitmap || state.nome.startsWith("captura_"))) openSlot(primeira.id);
+      else showState();
     });
   }
 
