@@ -1,8 +1,8 @@
 // Funciona sem internet depois da primeira visita. Ao mudar qualquer arquivo, aumente a VERSAO.
-const VERSAO = "fotoodonto-v2";
+const VERSAO = "fotoodonto-v7";
 const ARQUIVOS = [
   "./", "index.html", "style.css", "manifest.webmanifest",
-  "js/app.js", "js/state.js", "js/guides.js", "js/gabarito.js", "js/avaliador.js", "js/editor.js",
+  "js/app.js", "js/state.js", "js/guides.js", "js/serie.js", "js/gabarito.js", "js/avaliador.js", "js/editor.js",
   "logo.png", "icons/icon-192.png", "icons/icon-512.png",
 ];
 self.addEventListener("install", (e) => {

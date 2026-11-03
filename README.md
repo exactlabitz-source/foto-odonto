@@ -9,7 +9,7 @@ Material de apoio da aula do Dr. Tiago Botelho (EOA), com a identidade da EXACT 
 
 | Aba | Para que serve |
 |---|---|
-| **Gabarito** | Escolha o tipo de foto (face, sorriso, intraoral frontal, laterais, oclusais, detalhe), abra a câmera e alinhe com as linhas-guia. Também funciona sobre uma foto da galeria. |
+| **Gabarito** | Escolha o tipo de foto (frontal em repouso e sorrindo, lábios em repouso, perfil em repouso e sorrindo, intraoral frontal, laterais esquerda e direita). As fotos ficam numa série e, no final, o botão **Gerar PDF** monta a folha com as 8 fotos, abra a câmera e alinhe com as linhas-guia. Também funciona sobre uma foto da galeria. |
 | **Avaliador** | Mede nitidez (foco), áreas estouradas/reflexos, exposição e resolução, e dá dicas do que corrigir. |
 | **Editor** | Botão **Melhorar automaticamente** (corrige brilho e contraste e aplica nitidez leve, sem mexer na cor), **balanço de branco por toque no cinza**, e 4 controles simples: brilho, contraste, cor e nitidez. Em *Mais ajustes*: realces, sombras, matiz, saturação, endireitar e corte. Exporta JPEG sem dados de localização (EXIF). |
 
@@ -26,6 +26,10 @@ Dica: depois do primeiro acesso, o site abre mesmo sem internet (funciona como a
 ## Atualizar o site
 
 Edite os arquivos no GitHub e, se mudar qualquer arquivo, aumente o número `VERSAO` no começo de `sw.js` (por exemplo `fotoodonto-v2`). Assim o celular dos alunos baixa a versão nova.
+
+## Padrão de zoom
+
+A câmera do Gabarito abre sempre em **2,5x**. Fotos de face: celular na vertical, a cerca de 1 m. Fotos de lábios e intraorais: celular na horizontal, a 30 a 50 cm. O selo no canto do quadro mostra como o zoom foi aplicado: "(câmera)" quando o navegador controla o zoom real (Chrome no Android, em geral) e "(recorte digital)" quando não controla (iPhone/Safari), caso em que a foto é recortada no centro e perde resolução.
 
 ## Limites (para dizer na aula)
 

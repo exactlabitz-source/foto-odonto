@@ -62,6 +62,9 @@ h3{margin:0 0 8px;font-size:1.02rem}
 .stage video,.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .stage svg *{vector-effect:non-scaling-stroke}
+.zoomtag{position:absolute;top:8px;left:8px;z-index:2;background:rgba(5,12,20,.78);color:#fff;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px}
+.zoomtag[hidden]{display:none}
+.stage video{transform-origin:center}
 .stage-empty{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;color:#9FB3C8;text-align:center;padding:12px;font-size:.9rem}
 .stage-empty p{margin:0;background:rgba(5,12,20,.75);padding:4px 12px;border-radius:999px}
 .stage-empty[hidden]{display:none}
@@ -134,3 +137,17 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
 .linkbtn{background:none;border:0;color:var(--muted);font:inherit;font-size:.86rem;text-decoration:underline;padding:10px 4px;cursor:pointer}
 .foot img{height:22px;width:auto;display:block;margin:0 0 8px}
 @media (max-width:420px){ .top .logo{height:38px} .top h1{font-size:.98rem} }
+
+/* série e PDF */
+.cnt{font-weight:500;font-size:.82rem;color:var(--muted);margin-left:6px}
+.serie-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.slot{appearance:none;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:4px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:3px;align-items:stretch}
+.slot .th{aspect-ratio:1/1;border-radius:8px;background:var(--bg) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700}
+.slot .lb{font-size:.68rem;line-height:1.15;text-align:center;min-height:2.3em}
+.slot.done{border-color:var(--ok)}
+.slot.cur{border-color:var(--accent)}
+.field{display:block;font-size:.88rem;font-weight:600;margin:12px 0 4px}
+.field input{display:block;width:100%;margin-top:4px;font:inherit;font-weight:400;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.slot.edited .th{box-shadow:inset 0 0 0 3px var(--accent)}
+.slot:disabled{opacity:.45;cursor:default}
