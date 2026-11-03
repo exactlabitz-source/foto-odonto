@@ -85,7 +85,7 @@
     <label class="field">Identificação no PDF (opcional)
       <input id="serieId" type="text" maxlength="40" placeholder="Ex.: iniciais ou código do caso" autocomplete="off">
     </label>
-    <p class="note">Não escreva o nome completo do paciente.</p>
+    <p class="note">Não escreva o nome completo do paciente. As fotos da série ficam guardadas só neste aparelho, mesmo depois de fechar o app; use “Limpar série” para apagar.</p>
     <div class="actions">
       <button id="btnPdf" class="btn gold" disabled>Gerar PDF das fotos</button>
       <button id="btnPdfShare" class="btn" hidden>Compartilhar PDF</button>
@@ -106,6 +106,13 @@
     <label class="btn primary">Escolher foto
       <input id="evalInput" type="file" accept="image/*" hidden>
     </label>
+  </div>
+
+  <div id="evalSerie" class="card" hidden>
+    <h3>Fotos do protocolo</h3>
+    <p class="note">Toque em uma foto para ver o feedback detalhado. As fotos tiradas no Gabarito ficam guardadas neste aparelho.</p>
+    <div id="evalSerieGrid" class="serie-grid"></div>
+    <p id="evalSerieSum" class="note" role="status"></p>
   </div>
 
   <div id="evalEmpty" class="card empty">
@@ -146,7 +153,7 @@
   </div>
 
   <div id="edEmpty" class="card empty">
-    <p>Nenhuma foto carregada. Escolha uma foto da galeria ou capture uma no Gabarito.</p>
+    <p>Nenhuma foto carregada. Escolha uma foto da galeria ou capture uma no Gabarito. As fotos do protocolo aparecem aqui para você selecionar.</p>
   </div>
 
   <div id="edWork" hidden>

@@ -6,6 +6,45 @@ const QUALIDADE = 0.88;
 const itens = new Map();          // id -> { bytes, w, h, url }
 const ouvintes = new Set();
 
+// persistência local (IndexedDB): as fotos continuam disponíveis depois de recarregar a página.
+// Ficam só neste aparelho, dentro do navegador; nada é enviado a servidor.
+const BANCO = "fotoodonto-serie", LOJA = "fotos";
+function abrirBanco() {
+  return new Promise((ok, falha) => {
+    if (!window.indexedDB) { falha(new Error("sem indexedDB")); return; }
+    const r = indexedDB.open(BANCO, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(LOJA);
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => falha(r.error);
+  });
+}
+async function noBanco(modo, fn) {
+  try {
+    const db = await abrirBanco();
+    return await new Promise((ok, falha) => {
+      const tx = db.transaction(LOJA, modo);
+      const res = fn(tx.objectStore(LOJA));
+      tx.oncomplete = () => { db.close(); ok(res && res.result !== undefined ? res.result : undefined); };
+      tx.onerror = tx.onabort = () => { db.close(); falha(tx.error); };
+    });
+  } catch (e) { return undefined; }
+}
+const guardarLocal = (id, it) => noBanco("readwrite", (l) => l.put({ bytes: it.bytes, w: it.w, h: it.h, orig: it.orig || null }, id));
+const limparLocal = () => noBanco("readwrite", (l) => l.clear());
+async function carregarLocal() {
+  try {
+    const db = await abrirBanco();
+    return await new Promise((ok) => {
+      const reg = {};
+      const tx = db.transaction(LOJA, "readonly");
+      const cur = tx.objectStore(LOJA).openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (c) { reg[c.key] = c.value; c.continue(); } };
+      tx.oncomplete = () => { db.close(); ok(reg); };
+      tx.onerror = tx.onabort = () => { db.close(); ok({}); };
+    });
+  } catch (e) { return {}; }
+}
+
 export const serie = {
   has: (id) => itens.has(id),
   get: (id) => itens.get(id),
@@ -24,7 +63,9 @@ export const serie = {
     const bytes = new Uint8Array(await blob.arrayBuffer());
     const velho = itens.get(id);
     if (velho) URL.revokeObjectURL(velho.url);
-    itens.set(id, { bytes, w: c.width, h: c.height, url: URL.createObjectURL(blob), orig: orig || null });
+    const novo = { bytes, w: c.width, h: c.height, url: URL.createObjectURL(blob), orig: orig || null };
+    itens.set(id, novo);
+    guardarLocal(id, novo);
     ouvintes.forEach((f) => f());
   },
   // grava a versão editada guardando a original (a primeira) para poder restaurar
@@ -38,15 +79,31 @@ export const serie = {
     if (!it || !it.orig) return;
     const blob = new Blob([it.orig.bytes], { type: "image/jpeg" });
     URL.revokeObjectURL(it.url);
-    itens.set(id, { bytes: it.orig.bytes, w: it.orig.w, h: it.orig.h, url: URL.createObjectURL(blob), orig: null });
+    const volta = { bytes: it.orig.bytes, w: it.orig.w, h: it.orig.h, url: URL.createObjectURL(blob), orig: null };
+    itens.set(id, volta);
+    guardarLocal(id, volta);
     ouvintes.forEach((f) => f());
   },
   clear() {
     itens.forEach((v) => URL.revokeObjectURL(v.url));
     itens.clear();
+    limparLocal();
     ouvintes.forEach((f) => f());
   },
 };
+
+// ao abrir o app, recupera as fotos guardadas (sem sobrescrever o que já foi tirado nesta sessão)
+serie.ready = carregarLocal().then((reg) => {
+  let mudou = false;
+  Object.keys(reg).forEach((id) => {
+    if (itens.has(id)) return;
+    const v = reg[id];
+    if (!v || !v.bytes) return;
+    itens.set(id, { bytes: v.bytes, w: v.w, h: v.h, url: URL.createObjectURL(new Blob([v.bytes], { type: "image/jpeg" })), orig: v.orig || null });
+    mudou = true;
+  });
+  if (mudou) ouvintes.forEach((f) => f());
+});
 
 // ---------- escritor de PDF mínimo (sem bibliotecas) ----------
 const latin1 = (s) => {

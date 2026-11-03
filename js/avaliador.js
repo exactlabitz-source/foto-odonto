@@ -1,4 +1,6 @@
 import { state, setPhoto, loadFile, onPhoto, bitmapToCanvas } from "./state.js";
+import { GUIAS } from "./guides.js";
+import { serie } from "./serie.js";
 
 const $ = (id) => document.getElementById(id);
 const ANALISE_W = 640;   // largura de análise (mantém as medidas comparáveis entre aparelhos)
@@ -128,6 +130,73 @@ function drawHist(m) {
   });
 }
 
+// ---------- fotos da série do Gabarito ----------
+let slotAv = null;
+const cacheAv = new Map(); // url -> { nivel }
+const ROT = { ok: "Ok", warn: "Atenção", bad: "Refazer" };
+
+async function nivelDe(it) {
+  if (cacheAv.has(it.url)) return cacheAv.get(it.url);
+  let nivel = null;
+  try {
+    const bmp = await createImageBitmap(new Blob([it.bytes], { type: "image/jpeg" }));
+    nivel = judge(analyze(bmp)).nivel;
+    if (bmp.close) bmp.close();
+  } catch (e) { /* sem avaliação */ }
+  cacheAv.set(it.url, nivel);
+  return nivel;
+}
+
+async function openSlotAv(id) {
+  const it = serie.get(id);
+  if (!it) return;
+  try {
+    const bmp = await createImageBitmap(new Blob([it.bytes], { type: "image/jpeg" }));
+    slotAv = id;
+    setPhoto(bmp, "captura_" + id);
+    renderSerieAv();
+  } catch (e) { alert("Não consegui abrir esta foto."); }
+}
+
+let rodada = 0;
+async function renderSerieAv() {
+  const card = $("evalSerie");
+  card.hidden = serie.count() === 0;
+  if (card.hidden) return;
+  const eu = ++rodada;
+  const box = $("evalSerieGrid");
+  box.innerHTML = "";
+  const tags = {};
+  GUIAS.forEach((g, i) => {
+    const it = serie.get(g.id);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "slot" + (it ? " done" : "") + (g.id === slotAv ? " cur" : "");
+    b.disabled = !it;
+    b.setAttribute("aria-label", g.nome + (it ? "" : " (sem foto)"));
+    const th = document.createElement("span");
+    th.className = "th";
+    if (it) th.style.backgroundImage = "url(" + it.url + ")"; else th.textContent = String(i + 1);
+    const lb = document.createElement("span");
+    lb.className = "lb"; lb.textContent = g.curto;
+    const tg = document.createElement("span");
+    tg.className = "tag av"; tg.hidden = true;
+    tags[g.id] = tg;
+    b.append(th, lb, tg);
+    b.addEventListener("click", () => openSlotAv(g.id));
+    box.appendChild(b);
+  });
+  const cont = { ok: 0, warn: 0, bad: 0 };
+  for (const g of GUIAS) {
+    const it = serie.get(g.id);
+    if (!it) continue;
+    const n = await nivelDe(it);
+    if (eu !== rodada) return; // outra renderização começou
+    if (n) { cont[n]++; tags[g.id].hidden = false; tags[g.id].textContent = ROT[n]; tags[g.id].className = "tag av " + n; }
+  }
+  $("evalSerieSum").textContent = serie.count() + " foto(s) na série: " + cont.ok + " ok, " + cont.warn + " com atenção, " + cont.bad + " para refazer.";
+}
+
 function render() {
   if (!state.bitmap) { $("evalEmpty").hidden = false; $("evalOut").hidden = true; return; }
   $("evalEmpty").hidden = true;
@@ -173,5 +242,13 @@ export function initAvaliador() {
     catch (err) { alert("Não consegui abrir essa imagem. Tente JPG ou PNG."); }
   });
   onPhoto(() => { if (!$("tab-avaliador").hidden) render(); });
-  document.addEventListener("tabchange", (e) => { if (e.detail === "avaliador") render(); });
+  serie.onChange(() => { if (!$("tab-avaliador").hidden) renderSerieAv(); });
+  document.addEventListener("tabchange", (e) => {
+    if (e.detail !== "avaliador") return;
+    renderSerieAv();
+    const primeira = GUIAS.find((g) => serie.has(g.id));
+    // sem foto aberta (ou só uma captura antiga): abre a primeira da série
+    if (primeira && (!state.bitmap || (state.nome.startsWith("captura_") && !slotAv))) openSlotAv(primeira.id);
+    else render();
+  });
 }
