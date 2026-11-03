@@ -71,6 +71,8 @@ async function openCam() {
   $("btnShot").hidden = false;
   $("btnFlip").hidden = false;
   $("btnCam").textContent = "Reiniciar câmera";
+  // traz o quadro para a tela (no celular deitado, o quadro ocupa toda a altura)
+  try { $("stage").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) { /* ignora */ }
 }
 
 // abre a câmera em 2,5x: usa o zoom real da câmera quando o navegador permite; senão, recorta digitalmente

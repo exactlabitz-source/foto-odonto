@@ -154,3 +154,18 @@ ul.plain{margin:6px 0 0;padding-left:20px} ul.plain li{margin:6px 0}
 
 .tag.av{align-self:center;font-size:.64rem;padding:1px 7px;border-radius:999px;font-weight:800;background:var(--line);color:var(--ink)}
 .tag.av.ok{background:#DDF3E6;color:#14683A}.tag.av.warn{background:#FFF0CC;color:#7A5200}.tag.av.bad{background:#FFD9D9;color:#9A1B1B}
+
+/* botões de captura sempre visíveis com a câmera aberta */
+.actions:has(#btnShot:not([hidden])){position:sticky;bottom:0;z-index:15;background:var(--bg);padding:8px 0;margin:8px 0 0}
+/* celular deitado: o quadro cabe na altura da tela e os botões ficam em coluna, à direita */
+@media (orientation:landscape) and (max-height:540px){
+  .top{display:none}
+  #tab-gabarito{padding-right:calc(140px + env(safe-area-inset-right,0px));padding-top:8px}
+  #tab-gabarito > h2,#tab-gabarito > .lead{display:none}
+  #tab-gabarito .stage.land,#tab-gabarito .stage.port{width:auto;max-width:100%;height:calc(100dvh - 80px);margin:4px auto}
+  #tab-gabarito .actions:has(#btnShot:not([hidden])){position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:50px;bottom:8px;width:124px;flex-direction:column;justify-content:center;flex-wrap:nowrap;background:transparent;padding:0;margin:0;gap:10px}
+  #tab-gabarito .actions:has(#btnShot:not([hidden])) .btn{width:100%;text-align:center;justify-content:center;padding:12px 6px}
+  #btnShot{padding:18px 6px!important;font-size:1.05rem}
+}
+
+.stage{scroll-margin-top:68px}

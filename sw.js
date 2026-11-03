@@ -1,5 +1,5 @@
 // Funciona sem internet depois da primeira visita. Ao mudar qualquer arquivo, aumente a VERSAO.
-const VERSAO = "fotoodonto-v8";
+const VERSAO = "fotoodonto-v9";
 const ARQUIVOS = [
   "./", "index.html", "style.css", "manifest.webmanifest",
   "js/app.js", "js/state.js", "js/guides.js", "js/serie.js", "js/gabarito.js", "js/avaliador.js", "js/editor.js",
